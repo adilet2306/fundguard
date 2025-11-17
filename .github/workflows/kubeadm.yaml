@@ -1,0 +1,69 @@
+name: Create kubeadm cluster and deploy elasticsearch
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform action to perform'
+        required: true
+        default: 'apply'
+        type: choice
+        options:
+          - apply
+          - destroy
+      project:
+        description: 'Provide GCP project'
+        required: true
+        default: ''
+      user:
+        description: 'Provide main user'
+        required: true
+        default: ''
+      bucket:
+        description: 'Provide bucket name'
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Update backend file
+      run: |
+          sed -i "s/bucket *= *\".*\"/bucket = \"${{ inputs.bucket }}\"/" backend.tf
+      shell: bash
+
+    - name: Create Service Account Key File
+      run: |
+          echo '${{ secrets.SERVICE_ACCOUNT }}' > service.json
+      shell: bash
+
+    - name: Set GOOGLE_APPLICATION_CREDENTIALS
+      run: echo "GOOGLE_APPLICATION_CREDENTIALS=$PWD/service.json" >> $GITHUB_ENV
+
+    - name: Set Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Terraform Init
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/service.json
+      run: terraform init
+    
+    - name: Terraform Plan
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/service.json
+      run: terraform plan -var project=${{ inputs.project }} -var user=${{ inputs.user }}
+
+    - name: Apply or Destroy
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/service.json
+      run: |
+        if [[ "${{ github.event.inputs.action }}" == "apply" ]]; then
+          terraform apply -var project=${{ inputs.project }} -var user=${{ inputs.user }} -auto-approve
+        else
+          terraform destroy -var project=${{ inputs.project }} -var user=${{ inputs.user }} -auto-approve
+        fi
