@@ -15,7 +15,7 @@ resource "google_compute_firewall" "allow_all" {
 
   allow {
     protocol = "tcp"
-    ports    = ["0-65535"]
+    ports    = ["30092"]
   }
 }
 
