@@ -1,7 +1,7 @@
 variable "project" {
-  default = "centered-cursor-471323-s5"
+  default = ""
 }
 
 variable "user" {
-  default = "adiletabdraimov"
+  default = ""
 }

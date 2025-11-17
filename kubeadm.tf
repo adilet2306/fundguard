@@ -50,6 +50,17 @@ resource "google_compute_instance" "kubeadm" {
     EOT
   }
 
+    provisioner "file" {
+    source      = "elastic.yaml"
+    destination = "/tmp/elastic.yaml"
+    connection {
+      type        = "ssh"
+      user        = var.user
+      private_key = file("~/.ssh/id_rsa")
+      host        = self.network_interface[0].access_config[0].nat_ip
+    }
+  }
+
 
   provisioner "remote-exec" {
     inline = [
@@ -88,6 +99,12 @@ resource "google_compute_instance" "kubeadm" {
       "kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml",
       "kubectl patch deployment metrics-server -n kube-system --type='json' -p='[{\"op\": \"add\", \"path\": \"/spec/template/spec/containers/0/args/-\", \"value\": \"--kubelet-insecure-tls\"}, {\"op\": \"add\", \"path\": \"/spec/template/spec/containers/0/args/-\", \"value\": \"--kubelet-preferred-address-types=InternalIP\"}]'",
       "echo 'alias k=kubectl' >> ~/.bashrc",
+      "kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml",
+      "kubectl patch storageclass local-path -p '{\"metadata\":{\"annotations\":{\"storageclass.kubernetes.io/is-default-class\":\"true\"}}}'",
+      "kubectl create -f https://download.elastic.co/downloads/eck/3.2.0/crds.yaml",
+      "kubectl apply -f https://download.elastic.co/downloads/eck/3.2.0/operator.yaml",
+      "sleep 30",
+      "kubectl apply -f /tmp/elastic.yaml",    
     ]
 
     connection {
