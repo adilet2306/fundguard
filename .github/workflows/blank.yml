@@ -25,4 +25,4 @@ jobs:
       - name: Git clone
         run: git clone https://github.com/adilet2306/fundguard.git
       - name: list
-        run: ls
+        run: ls fundguard
